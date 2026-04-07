@@ -1,15 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { listEnrollments } from '../api';
+import { useUser } from '../context/UserContext';
 import './DashboardHome.css';
 
 const DashboardHome = () => {
   const [enrollments, setEnrollments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const studentName = localStorage.getItem('studentName') || 'Student';
-  const studentId = localStorage.getItem('studentId');
+  const { user } = useUser();
+  const studentName = user ? user.name : 'Student';
+  const studentId = user ? user.id : null;
 
   useEffect(() => {
     const fetchEnrollments = async () => {
+      if (!studentId) {
+        setLoading(false);
+        return;
+      }
       try {
         const data = await listEnrollments(studentId);
         setEnrollments(data);
@@ -48,7 +54,7 @@ const DashboardHome = () => {
           <div className="stat-info">
             <h3>Total Credits</h3>
             <p className="stat-number">
-              {loading ? '-' : enrollments.reduce((acc, course) => acc + (course.credits || 0), 0)}
+              {loading ? '-' : enrollments.reduce((acc, enrollment) => acc + (enrollment.course?.credits || 0), 0)}
             </p>
           </div>
         </div>
@@ -65,16 +71,19 @@ const DashboardHome = () => {
           </div>
         ) : (
           <ul className="activity-list">
-            {enrollments.slice(0, 3).map((course, index) => (
-              <li key={index} className="activity-item">
-                <div className="activity-icon">📘</div>
-                <div className="activity-details">
-                  <h4>{course.name}</h4>
-                  <p>{course.facultyName} • {course.days} • {course.startTime}</p>
-                </div>
-                <div className="activity-credits">{course.credits} Cr</div>
-              </li>
-            ))}
+            {enrollments.slice(0, 3).map((enrollment, index) => {
+              const course = enrollment.course || {};
+              return (
+                <li key={index} className="activity-item">
+                  <div className="activity-icon">📘</div>
+                  <div className="activity-details">
+                    <h4>{course.name}</h4>
+                    <p>{course.facultyName} • {course.days} • {course.startTime?.substring(0, 5)}</p>
+                  </div>
+                  <div className="activity-credits">{course.credits} Cr</div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>

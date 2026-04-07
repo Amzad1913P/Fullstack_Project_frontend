@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { listEnrollments } from '../api';
+import { useUser } from '../context/UserContext';
 import './Timetable.css';
 
 const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
@@ -7,11 +8,21 @@ const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 const Timetable = () => {
   const [enrollments, setEnrollments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const studentId = localStorage.getItem('studentId');
+  const { user } = useUser();
+  const studentId = user ? user.id : null;
+
+  const timeSlots = [
+    '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', 
+    '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'
+  ];
 
   useEffect(() => {
-    fetchEnrollments();
-  }, [studentId]);
+    if (studentId) {
+      fetchEnrollments();
+    } else if (user) {
+        setLoading(false);
+    }
+  }, [studentId, user]);
 
   const fetchEnrollments = async () => {
     try {
@@ -24,12 +35,19 @@ const Timetable = () => {
     }
   };
 
-  // Helper to check if a course falls on a particular day
-  const courseOnDay = (course, dayIndex) => {
-    // Backend returns days as "110000" binary string for Mon-Sat.
-    const binaryDays = course.days || "000000";
+  const courseOnDay = (enrollment, dayIndex) => {
+    // Days are stored on the course object
+    const binaryDays = enrollment.course?.days || "000000";
     return binaryDays.charAt(dayIndex) === '1';
   };
+
+  const parseTimeToMinutes = (timeStr) => {
+    if (!timeStr) return 0;
+    const parts = timeStr.split(':');
+    return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+  };
+
+  if (loading) return <div className="loader">Loading timetable...</div>;
 
   return (
     <div className="timetable-page">
@@ -38,39 +56,47 @@ const Timetable = () => {
         <p>A visual representation of your enrolled classes.</p>
       </div>
 
-      {loading ? (
-        <div className="loader">Loading timetable...</div>
+      {!user ? (
+        <div className="glass-panel error-state">
+          <p>Please log in to view your timetable.</p>
+        </div>
       ) : enrollments.length === 0 ? (
         <div className="glass-panel empty-state">
           <p>No classes scheduled. Enroll in courses to build your timetable.</p>
         </div>
       ) : (
-        <div className="timetable-grid glass-panel">
+        <div className="timetable-grid glass-panel horizontal-layout">
           <div className="timetable-header">
-            <div className="time-col">Time</div>
-            {daysOfWeek.map(day => (
-              <div key={day} className="day-col">{day}</div>
+            <div className="day-name-col">Day / Time</div>
+            {timeSlots.map(time => (
+              <div key={time} className="time-header-col">{time}</div>
             ))}
           </div>
 
           <div className="timetable-body">
-            {/* Extremely simplified visualization logic just for aesthetics */}
-            {['08:00', '10:00', '12:00', '14:00', '16:00'].map((timeSlot, timeIndex) => (
-              <div key={timeIndex} className="timetable-row">
-                <div className="time-cell">{timeSlot}</div>
+            {daysOfWeek.map((day, dayIndex) => (
+              <div key={dayIndex} className="timetable-row">
+                <div className="day-label-cell">{day}</div>
                 
-                {daysOfWeek.map((day, dayIndex) => {
-                  // Find course starting around this time block (simplified matching for demo UI)
-                  const courseThisSlot = enrollments.find(c => 
-                    courseOnDay(c, dayIndex) && c.startTime && c.startTime.startsWith(timeSlot.substring(0, 2))
-                  );
+                {timeSlots.map((timeSlot, timeIndex) => {
+                  const slotMinutes = parseTimeToMinutes(timeSlot);
+                  
+                  // Find course active during this 1-hour slot
+                  const enrollmentThisSlot = enrollments.find(e => {
+                    if (!courseOnDay(e, dayIndex)) return false;
+                    const start = parseTimeToMinutes(e.course?.startTime);
+                    const end = parseTimeToMinutes(e.course?.endTime);
+                    return start <= slotMinutes && end > slotMinutes;
+                  });
 
                   return (
-                    <div key={dayIndex} className="course-cell">
-                      {courseThisSlot ? (
+                    <div key={timeIndex} className="course-cell">
+                      {enrollmentThisSlot ? (
                         <div className="scheduled-course">
-                          <span className="course-name">{courseThisSlot.name}</span>
-                          <span className="course-time">{courseThisSlot.startTime} - {courseThisSlot.endTime}</span>
+                          <span className="course-name">{enrollmentThisSlot.course?.name || 'Course'}</span>
+                          <span className="course-time">
+                            {enrollmentThisSlot.course?.startTime?.substring(0, 5)} - {enrollmentThisSlot.course?.endTime?.substring(0, 5)}
+                          </span>
                         </div>
                       ) : (
                         <div className="empty-cell"></div>

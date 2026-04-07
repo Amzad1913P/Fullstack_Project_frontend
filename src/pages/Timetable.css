@@ -14,7 +14,7 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.time-col, .day-col {
+.time-col, .day-col, .time-header-col, .day-name-col {
   flex: 1;
   padding: 1rem;
   text-align: center;
@@ -25,41 +25,53 @@
   color: var(--text-muted);
 }
 
-.time-col {
-  flex: 0 0 100px;
-  border-right: 1px solid rgba(255, 255, 255, 0.05);
+.day-name-col, .day-label-cell {
+  flex: 0 0 120px;
+  border-right: 2px solid rgba(255, 255, 255, 0.1);
+  background: rgba(15, 23, 42, 0.8);
 }
 
-.timetable-row {
+.day-label-cell {
   display: flex;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: #f8fafc;
+  font-size: 0.9rem;
 }
 
-.timetable-row:last-child {
-  border-bottom: none;
-}
-
-.time-cell {
-  flex: 0 0 100px;
-  padding: 1rem;
-  text-align: center;
-  font-size: 0.85rem;
-  color: var(--text-muted);
+.time-header-col {
+  flex: 0 0 120px;
   border-right: 1px solid rgba(255, 255, 255, 0.05);
   display: flex;
   align-items: center;
   justify-content: center;
+  background: rgba(15, 23, 42, 0.9);
+}
+
+.timetable-grid.horizontal-layout {
+  overflow-x: auto;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.timetable-grid.horizontal-layout .timetable-header,
+.timetable-grid.horizontal-layout .timetable-row {
+  display: flex;
+  width: max-content;
+  min-width: 100%;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1); /* Horizontal lines between rows */
+}
+
+.timetable-grid.horizontal-layout .timetable-row:last-child {
+  border-bottom: none;
 }
 
 .course-cell {
-  flex: 1;
+  flex: 0 0 120px;
   border-right: 1px solid rgba(255, 255, 255, 0.05);
-  padding: 0.5rem;
-  min-height: 80px;
-}
-
-.course-cell:last-child {
-  border-right: none;
+  padding: 0.75rem;
+  min-height: 110px;
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .scheduled-course {

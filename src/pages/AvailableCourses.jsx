@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getAllCourses, enrollCourse, checkScheduleConflict } from '../api';
+import { useUser } from '../context/UserContext';
 import './AvailableCourses.css';
 
 const AvailableCourses = () => {
@@ -7,7 +8,8 @@ const AvailableCourses = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [enrollingMap, setEnrollingMap] = useState({});
-  const studentId = localStorage.getItem('studentId');
+  const { user } = useUser();
+  const studentId = user ? user.id : null;
 
   useEffect(() => {
     fetchCourses();
@@ -19,7 +21,6 @@ const AvailableCourses = () => {
       setCourses(data);
     } catch (err) {
       setError('Failed to fetch available courses');
-      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -27,7 +28,7 @@ const AvailableCourses = () => {
 
   const handleEnroll = async (course) => {
     if (!studentId) {
-      setError('User not logged in properly.');
+      setError('User data not available. Try refreshing.');
       return;
     }
 
@@ -49,7 +50,6 @@ const AvailableCourses = () => {
       
     } catch (err) {
       setError('Enrollment failed. Please try again.');
-      console.error(err);
     } finally {
       setEnrollingMap({...enrollingMap, [course.id]: false});
     }

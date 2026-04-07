@@ -6,11 +6,36 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/auth': 'http://localhost:8080',
-      '/course': 'http://localhost:8080',
-      '/enrollment': 'http://localhost:8080',
-      '/student': 'http://localhost:8080',
-      '/schedule': 'http://localhost:8080'
+      '/auth': {
+        target: 'https://fullstack-project-9vu8.onrender.com',
+        changeOrigin: true,
+        secure: false
+      },
+      '/course': {
+        target: 'https://fullstack-project-9vu8.onrender.com',
+        changeOrigin: true,
+        secure: false
+      },
+      '/enrollment': {
+        target: 'https://fullstack-project-9vu8.onrender.com',
+        changeOrigin: true,
+        secure: false
+      },
+      '/student': {
+        target: 'https://fullstack-project-9vu8.onrender.com',
+        changeOrigin: true,
+        secure: false
+      },
+      '/schedule': {
+        target: 'https://fullstack-project-9vu8.onrender.com',
+        changeOrigin: true,
+        secure: false
+      },
+      '/oauth2': {
+        target: 'https://fullstack-project-9vu8.onrender.com',
+        changeOrigin: true,
+        secure: false
+      }
     }
   }
 })

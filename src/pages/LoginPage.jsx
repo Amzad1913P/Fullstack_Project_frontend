@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { loginStudent, loginAdmin } from '../api';
+import { loginStudent, loginAdmin, getGoogleLoginUrl } from '../api';
+import { useUser } from '../context/UserContext';
 import './LoginPage.css';
 
 const LoginPage = () => {
@@ -10,54 +11,74 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login, user } = useUser();
+
+  useEffect(() => {
+    // If already logged in, redirect
+    if (user) {
+      navigate(user.role === 'ADMIN' ? '/admin' : '/student');
+    }
+
+    // Check for OAuth2 redirect params in URL
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    if (token) {
+      login(token);
+    }
+
+    // Fix: Manually render reCAPTCHA if the global grecaptcha is available
+    const initCaptcha = () => {
+      if (window.grecaptcha && window.grecaptcha.render) {
+        const captchaContainer = document.getElementById('recaptcha-container');
+        if (captchaContainer && captchaContainer.innerHTML === "") {
+          window.grecaptcha.render('recaptcha-container', {
+            'sitekey': import.meta.env.VITE_RECAPTCHA_SITE_KEY
+          });
+        }
+      } else {
+        setTimeout(initCaptcha, 500);
+      }
+    };
+    initCaptcha();
+  }, [user, navigate, login]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
+    console.log('Login attempt started for role:', role);
+    console.log('Payload:', { email, password });
+    
+    const captchaToken = window.grecaptcha ? window.grecaptcha.getResponse() : null;
+    if (!captchaToken) {
+      setError('Please complete the CAPTCHA verification.');
+      return;
+    }
+
     setLoading(true);
 
     try {
       let result;
       if (role === 'student') {
-        result = await loginStudent(email, password);
+        result = await loginStudent(email, password, captchaToken);
       } else {
-        result = await loginAdmin(email, password);
+        result = await loginAdmin(email, password, captchaToken);
       }
 
-      if (result.success || result.id || result.studentId) {
-        // Backend returns: success, message, id, name, role
-        localStorage.setItem("isLoggedIn", "true");
-        
-        // Use backend role if provided, otherwise fallback to local selection
-        const userRole = result.role ? result.role.toLowerCase() : role;
-        const userId = result.id || result.studentId || 1;
-        const userName = result.name || (userRole === 'admin' ? "Administrator" : "Student");
-
-        localStorage.setItem("userRole", userRole);
-        localStorage.setItem("userId", userId);
-        
-        // Keep studentId for backward compatibility if other pages use it specifically
-        if (userRole === 'student') {
-          localStorage.setItem("studentId", userId);
-          localStorage.setItem("studentName", userName);
-        } else {
-          localStorage.setItem("adminId", userId);
-          localStorage.setItem("adminName", userName);
-        }
-
-        if (userRole === 'admin') {
-          navigate('/admin');
-        } else {
-          navigate('/student');
-        }
+      if (result.success && result.token) {
+        await login(result.token);
       } else {
         setError(result.message || 'Invalid credentials');
       }
     } catch (err) {
+      console.error('Login Failed with error:', err);
       setError('Failed to connect to server. Check your backend server.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGoogleLogin = () => {
+    window.location.href = getGoogleLoginUrl();
   };
 
   return (
@@ -106,10 +127,24 @@ const LoginPage = () => {
             />
           </div>
 
+          <div 
+            id="recaptcha-container"
+            style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'center', minHeight: '78px' }}
+          ></div>
+
           <button type="submit" className="btn-primary auth-submit" disabled={loading}>
             {loading ? 'Signing in...' : `Sign In as ${role === 'student' ? 'Student' : 'Admin'}`}
           </button>
         </form>
+
+        <div className="auth-divider">
+          <span>OR</span>
+        </div>
+
+        <button type="button" onClick={handleGoogleLogin} className="google-login-btn">
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" />
+          Sign in with Google
+        </button>
 
         <div className="auth-footer">
           {role === 'student' && (

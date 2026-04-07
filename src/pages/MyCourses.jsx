@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { listEnrollments } from '../api';
+import { useUser } from '../context/UserContext';
 import './MyCourses.css';
 
 const MyCourses = () => {
   const [enrollments, setEnrollments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const studentId = localStorage.getItem('studentId');
+  const { user } = useUser();
+  const studentId = user ? user.id : null;
 
   useEffect(() => {
-    fetchEnrollments();
+    if (studentId) {
+      fetchEnrollments();
+    }
   }, [studentId]);
 
   const fetchEnrollments = async () => {
@@ -18,7 +22,6 @@ const MyCourses = () => {
       setEnrollments(data);
     } catch (err) {
       setError('Failed to fetch enrolled courses.');
-      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -42,28 +45,31 @@ const MyCourses = () => {
         </div>
       ) : (
         <div className="enrolled-list">
-          {enrollments.map((course, idx) => (
-            <div key={idx} className="enrolled-card glass-panel">
-              <div className="card-top">
-                <h3>{course.name}</h3>
-                <span className="status-badge">Active</span>
+          {enrollments.map((enrollment, idx) => {
+            const courseDetails = enrollment.course || {};
+            return (
+              <div key={idx} className="enrolled-card glass-panel">
+                <div className="card-top">
+                  <h3>{courseDetails.name || 'Unknown Course'}</h3>
+                  <span className="status-badge">Active</span>
+                </div>
+                <div className="card-body">
+                  <div className="info-group">
+                    <span className="label">Instructor</span>
+                    <span className="value">{courseDetails.facultyName || 'TBA'}</span>
+                  </div>
+                  <div className="info-group">
+                    <span className="label">Schedule</span>
+                    <span className="value">{courseDetails.days} • {courseDetails.startTime?.substring(0, 5)} - {courseDetails.endTime?.substring(0, 5)}</span>
+                  </div>
+                  <div className="info-group">
+                    <span className="label">Credits</span>
+                    <span className="value">{courseDetails.credits || '-'}</span>
+                  </div>
+                </div>
               </div>
-              <div className="card-body">
-                <div className="info-group">
-                  <span className="label">Instructor</span>
-                  <span className="value">{course.facultyName}</span>
-                </div>
-                <div className="info-group">
-                  <span className="label">Schedule</span>
-                  <span className="value">{course.days} • {course.startTime} - {course.endTime}</span>
-                </div>
-                <div className="info-group">
-                  <span className="label">Credits</span>
-                  <span className="value">{course.credits}</span>
-                </div>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
